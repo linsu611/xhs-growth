@@ -9,6 +9,7 @@ const vaultProject = process.env.XHS_OBSIDIAN_PROJECT || defaultVaultProject;
 const profileUrl =
   process.env.XHS_PROFILE_URL ||
   "https://www.xiaohongshu.com/user/profile/6a365916000000000f038c02?tab=note&subTab=note";
+const loginMode = process.argv.includes("--login");
 
 const userDataDir = process.env.XHS_BROWSER_PROFILE || join(root, ".xhs-browser-profile");
 const monitorDir = join(vaultProject, "小红书监控");
@@ -192,6 +193,14 @@ async function main() {
   });
   const page = await context.newPage();
   await page.goto(profileUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
+
+  if (loginMode) {
+    console.log("小红书登录模式已打开。请在浏览器中扫码登录；登录完成后回到 Codex 告诉我“好了”。");
+    console.log("这个进程会保持浏览器打开，不会自动关闭。");
+    await new Promise(() => {});
+    return;
+  }
+
   await page.waitForTimeout(5000);
 
   const data = await page.evaluate(() => {
