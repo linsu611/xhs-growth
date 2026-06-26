@@ -10,9 +10,9 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "5.0.4",
-    "vite": "6.4.2",
+    "playwright-core": "^1.61.1",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
-  },
-  "devDependencies": {}
+    "react-dom": "19.2.0",
+    "vite": "6.4.2"
+  }
 }
