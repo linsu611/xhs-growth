@@ -12,8 +12,13 @@ const profileUrl =
 
 const userDataDir = process.env.XHS_BROWSER_PROFILE || join(root, ".xhs-browser-profile");
 const monitorDir = join(vaultProject, "小红书监控");
-const publishDir = join(vaultProject, "发布记录");
 const today = new Date().toISOString().slice(0, 10);
+const dailyDir = join(vaultProject, "每日更新", today);
+const dailyImageDir = join(dailyDir, "图片素材");
+const dailyPublishDir = join(dailyDir, "发布记录");
+const dailyMonitorDir = join(dailyDir, "小红书监控");
+const dailyRetroDir = join(dailyDir, "复盘记录");
+const legacyPublishDir = join(vaultProject, "发布记录");
 
 function findBrowser() {
   const candidates = [
@@ -27,6 +32,40 @@ function findBrowser() {
 
 function ensureDir(path) {
   mkdirSync(path, { recursive: true });
+}
+
+function ensureDailyLayout() {
+  ensureDir(dailyImageDir);
+  ensureDir(dailyPublishDir);
+  ensureDir(dailyMonitorDir);
+  ensureDir(dailyRetroDir);
+
+  const readmePath = join(dailyDir, "README.md");
+  if (!existsSync(readmePath)) {
+    writeFileSync(
+      readmePath,
+      [
+        `# ${today} 每日更新`,
+        "",
+        "## 文件夹",
+        "",
+        "| 文件夹 | 内容 |",
+        "|---|---|",
+        "| `图片素材/` | 今天要发的小红书图片 |",
+        "| `发布记录/` | 标题、正文、发布链接、发布前判断 |",
+        "| `小红书监控/` | 自动抓取的小红书账号数据 |",
+        "| `复盘记录/` | T+3 / T+7 复盘 |",
+        "",
+        "## 今日状态",
+        "",
+        "- [ ] 图片素材",
+        "- [ ] 发布记录",
+        "- [ ] 小红书监控",
+        "- [ ] 复盘记录",
+      ].join("\n"),
+      "utf8",
+    );
+  }
 }
 
 function clean(text = "") {
@@ -80,32 +119,28 @@ function makeSnapshotMarkdown(data) {
 
 function appendIndex(data, snapshotPath) {
   const indexPath = join(monitorDir, "index.md");
+  const header = [
+    "# 小红书每日监控",
+    "",
+    "| 日期 | 状态 | 笔记数 | 粉丝 | 获赞与收藏 | 快照 |",
+    "|---|---|---:|---:|---:|---|",
+  ];
   if (!existsSync(indexPath)) {
-    writeFileSync(
-      indexPath,
-      [
-        "# 小红书每日监控",
-        "",
-        "| 日期 | 状态 | 笔记数 | 粉丝 | 获赞与收藏 | 快照 |",
-        "|---|---|---:|---:|---:|---|",
-      ].join("\n") + "\n",
-      "utf8",
-    );
+    writeFileSync(indexPath, header.join("\n") + "\n", "utf8");
   }
 
   const relSnapshot = snapshotPath.replace(vaultProject + "\\", "").replaceAll("\\", "/");
-  appendFileSync(
-    indexPath,
-    `| ${today} | ${data.status} | ${data.notes?.length ?? 0} | ${data.profile?.followers ?? ""} | ${data.profile?.likesAndCollects ?? ""} | [[${relSnapshot.replace(/\.md$/, "")}]] |\n`,
-    "utf8",
-  );
+  const row = `| ${today} | ${data.status} | ${data.notes?.length ?? 0} | ${data.profile?.followers ?? ""} | ${data.profile?.likesAndCollects ?? ""} | [[${relSnapshot.replace(/\.md$/, "")}]] |`;
+  const existing = readFileSync(indexPath, "utf8").split(/\r?\n/);
+  const rows = existing.filter((line) => line.startsWith("| ") && !line.startsWith("| 日期 ") && !line.startsWith("|---") && !line.startsWith(`| ${today} |`));
+  writeFileSync(indexPath, [...header, ...rows, row, ""].join("\n"), "utf8");
 }
 
 function updatePublishRecords(data) {
-  if (data.status !== "ok" || !data.notes?.length || !existsSync(publishDir)) return;
+  if (data.status !== "ok" || !data.notes?.length) return;
 
   const files = [];
-  const stack = [publishDir];
+  const stack = [dailyPublishDir, legacyPublishDir].filter((dir) => existsSync(dir));
   while (stack.length) {
     const dir = stack.pop();
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -145,6 +180,7 @@ function updatePublishRecords(data) {
 async function main() {
   ensureDir(monitorDir);
   ensureDir(userDataDir);
+  ensureDailyLayout();
 
   const executablePath = findBrowser();
   if (!executablePath) throw new Error("没有找到 Edge 或 Chrome。");
@@ -207,7 +243,7 @@ async function main() {
     notes: data.notes,
   };
 
-  const snapshotPath = join(monitorDir, `${today}.md`);
+  const snapshotPath = join(dailyMonitorDir, `${today}.md`);
   writeFileSync(snapshotPath, makeSnapshotMarkdown(result), "utf8");
   writeFileSync(join(monitorDir, "latest.json"), JSON.stringify(result, null, 2), "utf8");
   appendIndex(result, snapshotPath);

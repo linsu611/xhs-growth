@@ -29,6 +29,10 @@ node scripts/sync-xhs-metrics.mjs
 
 脚本会打开小红书主页，读取页面上可见的账号和笔记数据，写入：
 
+`E:\clam\lifeos\GrowthOS\项目\小红书GitHub榜单运营\每日更新\YYYY-MM-DD\小红书监控`
+
+同时更新全局索引：
+
 `E:\clam\lifeos\GrowthOS\项目\小红书GitHub榜单运营\小红书监控`
 
 首次使用如果提示登录，需要在打开的浏览器里扫码登录一次。登录态会保存在本仓库的 `.xhs-browser-profile/`，不会提交到 GitHub。
